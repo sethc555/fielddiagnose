@@ -1,10 +1,9 @@
-// fieldapp engine — manifold's field diagnostics, ported dependency-free.
+// Field Diagnose engine — dependency-free HVAC field diagnostics.
 // Inputs are what a tech reads off ANALOG GAUGES (pressures) + a line thermometer + a MULTIMETER
 // (amps, volts, capacitor µF) + the nameplate. Refrigerant physics comes from refrigerant_pt.json
-// (manifold/CoolProp, precomputed) so the phone needs no CoolProp. Pure functions, no DOM — the
-// browser UI and the node test both call diagnose(). Thresholds mirror manifold (target SH/SC 10°F,
-// amp RLA bands 1.10/1.20/0.55, condenser split 35/45); charge bands are the standard ±3°F field
-// rule (reconcile with manifold's DiagnosticTree for exact parity — see README).
+// (precomputed from CoolProp by build_pt_table.py) so the phone needs no CoolProp. Pure functions,
+// no DOM — the browser UI and the node test both call diagnose(). Thresholds are standard field
+// values (target SH/SC 10°F, amp RLA bands 1.10/1.20/0.55, condenser split 35/45; charge ±3°F).
 
 function _interp(rows, psig, idx) {        // rows: [[psig, bubbleF, dewF], …] sorted; idx 1=bubble 2=dew
   if (!rows || !rows.length) return null;
