@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Field Diagnose</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #111; color: #e6e6e6; font: 16px/1.4 system-ui, sans-serif; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 14px 14px 80px; }
+  h1 { font-size: 1.25rem; margin: .2rem 0; }
+  .sub { color: #8a8a8a; font-size: .85rem; margin-bottom: 12px; }
+  fieldset { border: 1px solid #2a2a2a; border-radius: 10px; margin: 0 0 12px; padding: 10px 12px 12px; }
+  legend { color: #7fb0ff; font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; padding: 0 6px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  label { flex: 1 1 130px; font-size: .82rem; color: #b9b9b9; }
+  input, select { width: 100%; margin-top: 3px; padding: 11px 10px; font-size: 1.05rem;
+    background: #181818; color: #fff; border: 1px solid #333; border-radius: 8px; }
+  button { position: fixed; left: 0; right: 0; bottom: 0; border: 0; padding: 16px; font-size: 1.1rem;
+    font-weight: 600; background: #1f6feb; color: #fff; }
+  #out { margin-top: 4px; }
+  .find { border-left: 4px solid #555; background: #161616; border-radius: 0 8px 8px 0; padding: 9px 12px; margin: 8px 0; }
+  .info  { border-color: #3a6; } .warn { border-color: #e8a13a; } .alarm { border-color: #e5484d; }
+  .find b { font-size: 1.02rem; } .find .d { color: #9a9a9a; font-size: .85rem; }
+  .find .a { color: #cfe3ff; font-size: .88rem; margin-top: 4px; }
+  .muted { color: #777; font-size: .8rem; }
+  #ptOut { margin-top: 8px; font-size: 1.05rem; }
+  #elecSafety { color: #e8a13a; font-size: .8rem; margin-bottom: 8px; }
+  .step { border-left: 3px solid #2a4a6a; padding: 6px 0 6px 10px; margin: 8px 0; }
+  .step b { font-size: .98rem; } .step .set { color: #7fb0ff; font-size: .78rem; }
+  .step .exp { color: #5bbf7a; font-size: .86rem; } .step .f { color: #d98a8a; font-size: .86rem; }
+  .seqSafety { color: #e8a13a; font-size: .8rem; margin: 6px 0; }
+  .wrow { display: flex; gap: 10px; margin: 10px 0; }
+  .wbtn { position: static; flex: 1; padding: 14px; border-radius: 8px; font-size: 1rem; font-weight: 600; background: #244; color: #fff; border: 1px solid #356; }
+  .wbtn.pass { background: #1f5e3a; } .wbtn.fail { background: #5e2a2a; } .wbtn.restart { background: #333; }
+  .f-found { border-color: #e5484d; }
+  .score { display: flex; align-items: center; gap: 14px; border: 2px solid #555; border-radius: 10px;
+    padding: 10px 16px; margin: 0 0 12px; background: #161616; }
+  .score .num { font-size: 2.1rem; font-weight: 700; line-height: 1; }
+  .score .lbl { font-size: .9rem; color: #cfcfcf; }
+  a.guidelink { color: #7fb0ff; text-decoration: underline; }
+  #toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: #2b2b2b; color: #fff;
+    padding: 9px 16px; border-radius: 8px; font-size: .85rem; opacity: 0; transition: opacity .18s; pointer-events: none;
+    z-index: 9; border: 1px solid #3a3a3a; }
+  #toast.on { opacity: 1; }
+  #printArea { display: none; }
+  @media print {
+    :root { color-scheme: light; }
+    body { background: #fff; color: #000; }
+    body > *:not(.wrap) { display: none !important; }
+    .wrap > *:not(#printArea) { display: none !important; }
+    .wrap { max-width: none; padding: 0; }
+    #printArea { display: block; white-space: pre-wrap; color: #000; padding: 16px;
+      font: 12px/1.45 ui-monospace, "Courier New", monospace; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Field Diagnose</h1>
+  <div class="sub">Read your analog gauges + multimeter, type the numbers, get a diagnosis. No hardware, no account, works offline.</div>
+
+  <fieldset><legend>Equipment</legend>
+    <div class="row">
+      <label>Refrigerant<select id="refrigerant"></select></label>
+      <label>Metering<select id="metering">
+        <option value="txv">TXV</option><option value="eev">EEV</option>
+        <option value="fixed_orifice">Fixed orifice</option><option value="capillary">Capillary</option>
+      </select></label>
+    </div>
+    <div class="row">
+      <label>RLA (amps)<input id="rla" inputmode="decimal"></label>
+      <label>LRA (amps)<input id="lra" inputmode="decimal"></label>
+      <label>Cap rated (µF)<input id="cap_rated_uf" inputmode="decimal"></label>
+    </div>
+    <div class="row">
+      <label>Target superheat °F<input id="target_superheat" inputmode="decimal" placeholder="10"></label>
+      <label>Target subcool °F<input id="target_subcool" inputmode="decimal" placeholder="10"></label>
+    </div>
+  </fieldset>
+
+  <fieldset><legend>Analog gauges</legend>
+    <div class="row">
+      <label>Suction / low (psig)<input id="suction_psig" inputmode="decimal"></label>
+      <label>Head / high (psig)<input id="head_psig" inputmode="decimal"></label>
+    </div>
+  </fieldset>
+
+  <fieldset><legend>Thermometer (°F) + indoor air</legend>
+    <div class="row">
+      <label>Suction line<input id="suction_line_f" inputmode="decimal"></label>
+      <label>Liquid line<input id="liquid_line_f" inputmode="decimal"></label>
+      <label>Outdoor air<input id="oat_f" inputmode="decimal"></label>
+    </div>
+    <div class="row">
+      <label>Return air<input id="return_air_f" inputmode="decimal"></label>
+      <label>Supply air<input id="supply_air_f" inputmode="decimal"></label>
+    </div>
+    <div class="row">
+      <label>Indoor wet-bulb<input id="indoor_wb_f" inputmode="decimal" placeholder="or RH →"></label>
+      <label>Indoor RH %<input id="indoor_rh" inputmode="decimal"></label>
+    </div>
+    <div class="wrow"><button class="wbtn" id="wxBtn">📍 Use local weather → fills outdoor air</button></div>
+    <div id="wxOut" class="muted"></div>
+  </fieldset>
+
+  <fieldset><legend>Capacity (optional)</legend>
+    <div class="row">
+      <label>System tons<input id="tons" inputmode="decimal"></label>
+      <label>Measured CFM<input id="cfm" inputmode="decimal" placeholder="or tons → est"></label>
+    </div>
+    <div class="row">
+      <label>Supply wet-bulb<input id="supply_wb_f" inputmode="decimal" placeholder="or RH →"></label>
+      <label>Supply RH %<input id="supply_rh" inputmode="decimal"></label>
+    </div>
+  </fieldset>
+
+  <fieldset><legend>Multimeter</legend>
+    <div class="row">
+      <label>Running amps<input id="amps" inputmode="decimal"></label>
+      <label>Line volts<input id="volts" inputmode="decimal"></label>
+      <label>Capacitor (µF)<input id="cap_uf" inputmode="decimal"></label>
+    </div>
+  </fieldset>
+
+  <fieldset><legend>P-T chart (live)</legend>
+    <div class="row">
+      <label>Refrigerant<select id="ptRef"></select></label>
+      <label>Pressure (psig)<input id="ptPsig" inputmode="decimal"></label>
+    </div>
+    <div id="ptOut" class="muted">Enter a gauge pressure to read its saturation temperature.</div>
+  </fieldset>
+
+  <fieldset><legend>Electrical troubleshooting</legend>
+    <div id="elecSafety"></div>
+    <label>Pick a symptom<select id="seqPick"><option value="">— select —</option></select></label>
+    <div id="seqOut"></div>
+  </fieldset>
+
+  <div id="out"><div class="muted">Fill in what you measured — a multimeter alone screens the electrical side; add gauges for charge.</div></div>
+  <div id="printArea"></div>
+</div>
+<button id="go">Diagnose</button>
+<div id="toast"></div>
+
+<script src="refrigerant_pt.js"></script>
+<script src="electrical_sequences.js"></script>
+<script src="engine.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  const FIELDS = ["refrigerant","metering","rla","lra","cap_rated_uf","target_superheat","target_subcool",
+                  "suction_psig","head_psig","suction_line_f","liquid_line_f","oat_f","return_air_f",
+                  "supply_air_f","indoor_wb_f","indoor_rh","supply_wb_f","supply_rh","tons","cfm",
+                  "amps","volts","cap_uf"];
+  // Data ships as a JS global (window.PT_DATA) so the page works both served over HTTP and from a
+  // file:// WebView in the APK (a file:// page can't fetch). Generated by build_pt_table.py.
+  const PT = window.PT_DATA || { refrigerants: {} };
+  const refs = Object.keys(PT.refrigerants);
+  const opts = refs.map(r => `<option>${r}</option>`).join("");
+  $("refrigerant").innerHTML = opts;
+  $("ptRef").innerHTML = opts;
+
+  // remember entries across opens (local only)
+  FIELDS.forEach(f => { const v = localStorage.getItem("fa_" + f); if (v != null && $(f)) $(f).value = v; });
+
+  // live P-T lookup (the reference chart every competitor has — you already ship the table)
+  function ptLookup() {
+    const ref = $("ptRef").value, p = parseFloat($("ptPsig").value);
+    if (!ref || isNaN(p)) { $("ptOut").className = "muted"; $("ptOut").textContent = "Enter a gauge pressure to read its saturation temperature."; return; }
+    const b = satFromP(PT, ref, p, "bubble"), d = satFromP(PT, ref, p, "dew");
+    $("ptOut").className = "";
+    $("ptOut").innerHTML = (b == null || d == null) ? "—" :
+      `dew (vapor) <b>${d}°F</b> &nbsp;·&nbsp; bubble (liquid) <b>${b}°F</b>` +
+      (Math.abs(d - b) >= 0.5 ? ` &nbsp;·&nbsp; glide ${Math.round((d - b) * 10) / 10}°F` : "");
+  }
+  $("ptRef").oninput = ptLookup; $("ptPsig").oninput = ptLookup;
+
+  // electrical troubleshooting read-sequences (data-driven guides — pick a symptom, follow the steps)
+  const SEQ = window.ELEC_SEQ || { sequences: [] };
+  $("elecSafety").textContent = "⚠ " + (SEQ.safety || "");
+  $("seqPick").innerHTML += SEQ.sequences.map(s => `<option value="${s.id}">${s.title}</option>`).join("");
+  // interactive wizard: pick a symptom -> walk the steps; ✓ matches advances, ✗ shows the cause.
+  let wiz = { seq: null, step: 0 };
+  let guidedFindings = {};   // wizard conclusions captured into the diagnosis + report
+  const _safety = s => (s && s.safety) ? `<div class="seqSafety">⚠ ${s.safety}</div>` : "";
+  function renderWiz() {
+    const s = wiz.seq;
+    if (!s) { $("seqOut").innerHTML = ""; return; }
+    const intro = _safety(s) + `<div class="muted" style="margin:6px 0">${s.symptom}</div>`;
+    if (wiz.step >= s.steps.length) {
+      guidedFindings[s.id] = { title: s.title, cause: 'All checks passed on this path — re-verify call, charge, airflow.', severity: 'info' };
+      $("seqOut").innerHTML = intro +
+        `<div class="step"><b>✓ All checks passed</b><div class="exp">No fault found on this path — re-verify the call, charge, and airflow.</div></div>` +
+        `<div class="muted" style="margin:6px 0">✓ Result added to the report.</div>` +
+        `<div class="wrow"><button class="wbtn restart">Start over</button></div>`;
+    } else {
+      const st = s.steps[wiz.step], isTest = st.fail && st.fail !== "—";
+      $("seqOut").innerHTML = intro +
+        `<div class="step"><div class="muted">Step ${wiz.step + 1} of ${s.steps.length}</div>` +
+        `<b>${st.measure}</b>` + (st.set && st.set !== "—" ? ` <span class="set">[${st.set}]</span>` : "") +
+        `<div class="exp">Expect: ${st.expect}</div></div>` +
+        (isTest
+          ? `<div class="wrow"><button class="wbtn pass">✓ Matches</button><button class="wbtn fail">✗ Doesn't</button></div>`
+          : `<div class="wrow"><button class="wbtn pass">Done — next →</button></div>`);
+    }
+    wireWiz();
+  }
+  function wireWiz() {
+    const q = c => $("seqOut").querySelector(c);
+    const pass = q(".pass"), fail = q(".fail"), restart = q(".restart");
+    if (pass) pass.onclick = () => { wiz.step++; renderWiz(); };
+    if (restart) restart.onclick = () => { wiz.step = 0; renderWiz(); };
+    if (fail) fail.onclick = () => {
+      const st = wiz.seq.steps[wiz.step];
+      guidedFindings[wiz.seq.id] = { title: wiz.seq.title, cause: st.fail, severity: 'alarm', step: wiz.step + 1 };
+      $("seqOut").innerHTML = _safety(wiz.seq) +
+        `<div class="step f-found"><b>→ Found it (step ${wiz.step + 1})</b><div class="f">${st.fail}</div></div>` +
+        `<div class="muted" style="margin:6px 0">✓ Added to the report — Diagnose or Share to include it.</div>` +
+        `<div class="wrow"><button class="wbtn restart">Start over</button></div>`;
+      wireWiz();
+    };
+  }
+  function pickSeq() {
+    const id = $("seqPick").value;
+    wiz = { seq: id ? SEQ.sequences.find(s => s.id === id) : null, step: 0 };
+    renderWiz();
+  }
+  $("seqPick").onchange = pickSeq;
+  function openGuide(id) {
+    $("seqPick").value = id; pickSeq();
+    const fs = $("seqPick").closest("fieldset");
+    if (fs) fs.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // --- diagnosis output + shareable report (the leave-behind a tech hands the customer) ---
+  const METERING_LABEL = { txv: "TXV", eev: "EEV", fixed_orifice: "Fixed orifice", capillary: "Capillary" };
+
+  function collectReadings(persist) {
+    const r = {};
+    FIELDS.forEach(f => { const el = $(f); if (el) { r[f] = el.value; if (persist) localStorage.setItem("fa_" + f, el.value); } });
+    return r;
+  }
+  const guideTitle = id => { const s = (SEQ.sequences || []).find(x => x.id === id); return s ? s.title : id; };
+  const guidedAsFindings = g => Object.values(g || {}).map(x => ({ severity: x.severity, summary: `Guided · ${x.title}`, detail: x.cause }));
+
+  function findingHTML(f) {
+    return `<div class="find ${f.severity}"><b>${f.summary}</b>` +
+      (f.detail ? ` <span class="d">${f.detail}</span>` : "") +
+      (f.advice ? `<div class="a">${f.advice}</div>` : "") +
+      (f.guide ? `<div class="a"><a href="#" class="guidelink" data-g="${f.guide}">→ Walk the “${guideTitle(f.guide)}” guide</a></div>` : "") +
+      `</div>`;
+  }
+  function reportActionsHTML() {
+    return `<div class="wrow" style="margin-top:14px">` +
+      `<button class="wbtn" id="shareBtn">Share</button>` +
+      `<button class="wbtn" id="copyBtn">Copy</button>` +
+      `<button class="wbtn" id="pdfBtn">PDF</button></div>` +
+      `<div class="muted" style="text-align:center">Send the readings + findings — as text, or Save as PDF.</div>`;
+  }
+  function scoreBadge(res) {
+    if (res.score == null) return "";
+    const c = res.band === 'good' ? '#3a6' : res.band === 'fair' ? '#e8a13a' : '#e5484d';
+    return `<div class="score" style="border-color:${c}"><div class="num" style="color:${c}">${res.score}</div>` +
+      `<div class="lbl">System health<br>${res.band.toUpperCase()}</div></div>`;
+  }
+  function renderOut(res) {
+    const all = res.findings.concat(guidedAsFindings(guidedFindings));
+    $("out").innerHTML = scoreBadge(res) + all.map(findingHTML).join("") + reportActionsHTML();
+    wireOut();
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+  function wireOut() {
+    const sb = $("shareBtn"), cb = $("copyBtn"), pb = $("pdfBtn");
+    if (sb) sb.onclick = shareReport;
+    if (cb) cb.onclick = copyReport;
+    if (pb) pb.onclick = printReport;
+    $("out").querySelectorAll(".guidelink").forEach(a => a.onclick = e => { e.preventDefault(); openGuide(a.dataset.g); });
+  }
+
+  // build the plain-text report from the current readings + diagnosis + any captured guided results
+  const _pad = (s, n) => { s = String(s); return s + " ".repeat(Math.max(0, n - s.length)); };
+  function buildReport(r, res) {
+    const L = [], now = new Date(), p2 = n => String(n).padStart(2, "0");
+    const stamp = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
+    L.push("FIELD DIAGNOSE — service report", stamp, "");
+    if (res.score != null) L.push(`System health: ${res.score}/100 — ${res.band.toUpperCase()}`, "");
+    const eq = [];
+    if (r.refrigerant) eq.push(["Refrigerant", r.refrigerant]);
+    if (r.metering) eq.push(["Metering", METERING_LABEL[r.metering] || r.metering]);
+    if (r.rla || r.lra) eq.push(["RLA / LRA", `${r.rla || "—"} / ${r.lra || "—"} A`]);
+    if (r.cap_rated_uf) eq.push(["Cap rated", `${r.cap_rated_uf} µF`]);
+    eq.push(["Targets", `SH ${r.target_superheat || 10}°F · SC ${r.target_subcool || 10}°F`]);
+    L.push("EQUIPMENT");
+    eq.forEach(([k, v]) => L.push("  " + _pad(k + ":", 14) + v));
+    L.push("");
+    const rd = [];
+    if (r.suction_psig) rd.push(["Suction", `${r.suction_psig} psig` + (res.SST != null ? `  (SST ${res.SST}°F)` : "")]);
+    if (r.head_psig) rd.push(["Head", `${r.head_psig} psig` + (res.SCT != null ? `  (SCT ${res.SCT}°F)` : "")]);
+    if (r.suction_line_f) rd.push(["Suction line", `${r.suction_line_f}°F` + (res.superheat != null ? `  → SH ${res.superheat}°F` : "")]);
+    if (r.liquid_line_f) rd.push(["Liquid line", `${r.liquid_line_f}°F` + (res.subcool != null ? `  → SC ${res.subcool}°F` : "")]);
+    if (r.oat_f) rd.push(["Outdoor air", `${r.oat_f}°F`]);
+    if (r.return_air_f || r.supply_air_f) rd.push(["Return/Supply", `${r.return_air_f || "—"} / ${r.supply_air_f || "—"}°F`]);
+    if (r.indoor_wb_f) rd.push(["Indoor WB", `${r.indoor_wb_f}°F`]);
+    else if (r.indoor_rh) rd.push(["Indoor RH", `${r.indoor_rh}%`]);
+    if (r.amps) rd.push(["Amps", `${r.amps} A`]);
+    if (r.volts) rd.push(["Volts", `${r.volts} V`]);
+    if (r.cap_uf) rd.push(["Capacitor", `${r.cap_uf} µF`]);
+    if (rd.length) { L.push("READINGS"); rd.forEach(([k, v]) => L.push("  " + _pad(k + ":", 14) + v)); L.push(""); }
+    L.push("FINDINGS");
+    res.findings.concat(guidedAsFindings(guidedFindings)).forEach(f => {
+      L.push(`  [${f.severity.toUpperCase()}] ${f.summary}` + (f.detail ? ` — ${f.detail}` : ""));
+      if (f.advice) L.push("         " + f.advice);
+    });
+    L.push("", "Generated offline by Field Diagnose — no account, no cloud.");
+    return L.join("\n");
+  }
+  function currentReport() { const r = collectReadings(false); return buildReport(r, diagnose(r, PT)); }
+  async function shareReport() {
+    const text = currentReport();
+    if (navigator.share) { try { await navigator.share({ title: "Field Diagnose report", text }); return; } catch (e) { if (e && e.name === "AbortError") return; } }
+    copyText(text);
+  }
+  function copyReport() { copyText(currentReport()); }
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => toast("Copied to clipboard")).catch(() => fallbackCopy(text));
+    } else fallbackCopy(text);
+  }
+  function fallbackCopy(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); toast("Copied to clipboard"); }
+    catch (e) { toast("Couldn't copy — long-press to select"); }
+    document.body.removeChild(ta);
+  }
+  function printReport() {
+    $("printArea").textContent = currentReport();
+    if (window.AndroidPrint && window.AndroidPrint.print) window.AndroidPrint.print();
+    else window.print();
+  }
+  let _toastT;
+  function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("on"); clearTimeout(_toastT); _toastT = setTimeout(() => t.classList.remove("on"), 1700); }
+
+  // --- optional online convenience: GPS -> NOAA (api.weather.gov) -> fill outdoor air ---
+  // The ONLY network call in the app; opt-in (button) and the diagnosis never depends on it.
+  async function getCoords() {
+    if (window.AndroidGeo && window.AndroidGeo.getLocation) {        // native LocationManager (APK)
+      const s = window.AndroidGeo.getLocation();                     // "lat,lon" or ""
+      if (s && s.indexOf(",") > 0) { const p = s.split(","); return { lat: +p[0], lon: +p[1] }; }
+    }
+    if (navigator.geolocation) return await new Promise(res =>       // browser / PWA fallback
+      navigator.geolocation.getCurrentPosition(
+        p => res({ lat: p.coords.latitude, lon: p.coords.longitude }),
+        () => res(null), { timeout: 8000, maximumAge: 600000 }));
+    return null;
+  }
+  async function fetchWeather() {
+    const out = $("wxOut");
+    out.className = "muted"; out.textContent = "Locating…";
+    let c = null;
+    try { c = await getCoords(); } catch (e) {}
+    if (!c || isNaN(c.lat)) { out.textContent = "No location fix — enable location near the unit, or type Outdoor air."; return; }
+    out.textContent = "Looking up NOAA weather…";
+    const H = { headers: { Accept: "application/geo+json" } };
+    try {
+      const pts = await (await fetch(`https://api.weather.gov/points/${c.lat.toFixed(4)},${c.lon.toFixed(4)}`, H)).json();
+      const pl = pts.properties && pts.properties.relativeLocation && pts.properties.relativeLocation.properties;
+      let tF = null, src = "";
+      try {
+        const st = await (await fetch(pts.properties.observationStations, H)).json();
+        const id = st.features[0].properties.stationIdentifier;
+        const ob = await (await fetch(`https://api.weather.gov/stations/${id}/observations/latest`, H)).json();
+        if (ob.properties.temperature.value != null) { tF = ob.properties.temperature.value * 9 / 5 + 32; src = id; }
+      } catch (e) {}
+      if (tF == null) {                                              // fall back to the hourly forecast
+        const fc = await (await fetch(pts.properties.forecastHourly, H)).json();
+        const p0 = fc.properties.periods[0];
+        tF = p0.temperatureUnit === "C" ? p0.temperature * 9 / 5 + 32 : p0.temperature; src = "forecast";
+      }
+      const t = Math.round(tF);
+      $("oat_f").value = t; localStorage.setItem("fa_oat_f", t);
+      out.className = "";
+      out.textContent = `${pl ? pl.city + ", " + pl.state + " · " : ""}${t}°F outdoor (NOAA ${src}) → filled Outdoor air.`;
+    } catch (e) {
+      out.className = "muted";
+      out.textContent = "Couldn't reach NOAA (" + ((e && e.message) || e) + ") — check the app's Network permission, or type Outdoor air.";
+    }
+  }
+  $("wxBtn").onclick = fetchWeather;
+
+  $("go").onclick = () => { renderOut(diagnose(collectReadings(true), PT)); };
+</script>
+</body>
+</html>
