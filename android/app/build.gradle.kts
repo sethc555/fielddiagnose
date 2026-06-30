@@ -10,15 +10,19 @@ android {
         applicationId = "org.fielddiagnose"
         minSdk = 31
         targetSdk = 35
-        versionCode = 9
-        versionName = "0.1.8"
+        versionCode = 10
+        versionName = "0.1.9"
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            // Self-distribution / sideload to GrapheneOS: sign release with the debug key so it installs.
-            signingConfig = signingConfigs.getByName("debug")
+            // F-Droid builds from source and signs with its OWN key, so the default release is
+            // unsigned. For self-distribution / sideload APKs, pass -PselfSign to debug-sign it
+            // (so it installs without going through F-Droid).
+            if (project.hasProperty("selfSign")) {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 

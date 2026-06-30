@@ -1,0 +1,29 @@
+# F-Droid catalog recipe for Field Diagnose.
+# Submit this as metadata/org.fielddiagnose.yml via a merge request to
+# https://gitlab.com/fdroid/fdroiddata  (see fdroid/SUBMITTING.md).
+# Listing text, changelog and screenshots are pulled automatically from the
+# fastlane/ tree in this repo, so they are not duplicated here.
+
+Categories:
+  - Science & Education
+License: GPL-3.0-or-later
+AuthorName: Seth Cope
+SourceCode: https://github.com/sethc555/fielddiagnose
+IssueTracker: https://github.com/sethc555/fielddiagnose/issues
+Changelog: https://github.com/sethc555/fielddiagnose/releases
+
+RepoType: git
+Repo: https://github.com/sethc555/fielddiagnose.git
+
+Builds:
+  - versionName: 0.1.9
+    versionCode: 10
+    commit: v0.1.9
+    subdir: android
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 0.1.9
+CurrentVersionCode: 10
