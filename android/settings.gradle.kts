@@ -14,5 +14,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "fieldapp"
-include(":app")
+rootProject.name = "fielddiagnose"
