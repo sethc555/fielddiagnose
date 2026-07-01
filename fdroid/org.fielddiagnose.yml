@@ -18,7 +18,7 @@ Repo: https://github.com/sethc555/fielddiagnose.git
 Builds:
   - versionName: 0.1.10
     versionCode: 11
-    commit: v0.1.10
+    commit: b73f3fc3a42cc65214230d5f5c7d15c1d59abdc6
     subdir: android
     gradle:
       - yes
