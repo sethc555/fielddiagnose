@@ -1,6 +1,16 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application") version "8.7.3"
 }
+
+// Reproducible Builds: the developer signs the release with this keystore and publishes it; F-Droid
+// rebuilds from source UNSIGNED and verifies it byte-matches, then distributes the developer-signed
+// APK. keystore.properties + the .jks are gitignored, so they're absent from F-Droid's checkout —
+// there the release stays unsigned, which is exactly what the reproducibility check needs.
+val ksFile = rootProject.file("keystore.properties")
+val ksProps = Properties().apply { if (ksFile.exists()) load(FileInputStream(ksFile)) }
 
 android {
     namespace = "org.fielddiagnose"
@@ -10,19 +20,25 @@ android {
         applicationId = "org.fielddiagnose"
         minSdk = 31
         targetSdk = 35
-        versionCode = 11
-        versionName = "0.1.10"
+        versionCode = 12
+        versionName = "0.1.11"
+    }
+
+    signingConfigs {
+        if (ksFile.exists()) {
+            create("release") {
+                storeFile = rootProject.file(ksProps.getProperty("storeFile"))
+                storePassword = ksProps.getProperty("storePassword")
+                keyAlias = ksProps.getProperty("keyAlias")
+                keyPassword = ksProps.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
-            // F-Droid builds from source and signs with its OWN key, so the default release is
-            // unsigned. For self-distribution / sideload APKs, pass -PselfSign to debug-sign it
-            // (so it installs without going through F-Droid).
-            if (project.hasProperty("selfSign")) {
-                signingConfig = signingConfigs.getByName("debug")
-            }
+            if (ksFile.exists()) signingConfig = signingConfigs.getByName("release")
         }
     }
 

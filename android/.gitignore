@@ -3,3 +3,5 @@ build/
 local.properties
 src/main/assets/
 *.apk
+keystore.properties
+*.jks
