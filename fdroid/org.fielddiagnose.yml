@@ -15,15 +15,18 @@ Changelog: https://github.com/sethc555/fielddiagnose/releases
 RepoType: git
 Repo: https://github.com/sethc555/fielddiagnose.git
 
+Binaries: https://github.com/sethc555/fielddiagnose/releases/download/v%v/FieldDiagnose-%v.apk
+AllowedAPKSigningKeys: 091a391a25e39447e0534afc6b6184233c3e157675bac13881ec787c868f49a8
+
 Builds:
-  - versionName: 0.1.10
-    versionCode: 11
-    commit: b73f3fc3a42cc65214230d5f5c7d15c1d59abdc6
+  - versionName: 0.1.11
+    versionCode: 12
+    commit: f3a379ea0d7602ae301a6c139b5a6eed2855749c
     subdir: android
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: 0.1.10
-CurrentVersionCode: 11
+CurrentVersion: 0.1.11
+CurrentVersionCode: 12
