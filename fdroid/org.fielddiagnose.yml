@@ -1,8 +1,7 @@
 # F-Droid catalog recipe for Field Diagnose.
-# Submit this as metadata/org.fielddiagnose.yml via a merge request to
-# https://gitlab.com/fdroid/fdroiddata  (see fdroid/SUBMITTING.md).
-# Listing text, changelog and screenshots are pulled automatically from the
-# fastlane/ tree in this repo, so they are not duplicated here.
+# Lives in fdroiddata as metadata/org.fielddiagnose.yml — submitted via MR !41764.
+# See fdroid/SUBMITTING.md for how it's wired, and RELEASE.md for cutting new versions.
+# Listing text, changelog and screenshots come from the fastlane/ tree, not duplicated here.
 
 Categories:
   - Science & Education

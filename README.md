@@ -39,11 +39,32 @@ Android app is a thin WebView over those bundled assets. No network is required 
 | `test_engine.js` | `node test_engine.js` — engine unit tests against textbook values |
 | `android/` | the WebView APK project |
 
+## Install
+- **F-Droid** — submitted for inclusion; the build is reproducible and developer-signed, so once
+  merged it shows up in the F-Droid client and updates automatically.
+- **Direct download** — grab the latest `FieldDiagnose-x.y.z.apk` from the
+  [Releases](https://github.com/sethc555/fielddiagnose/releases) page and sideload it. It's signed
+  with the project's release key — the same signature F-Droid publishes.
+
 ## Build the APK
-Needs an Android SDK + Gradle (compileSdk 35, minSdk 31, Java 17). From `android/`, set
-`local.properties` with `sdk.dir=/path/to/android-sdk`, then run `gradle :app:assembleRelease`.
-The release is debug-signed for sideloading; F-Droid / store builds use their own signing. A
-`copyWeb` task bundles the web files into the APK so the app and the node-tested engine never drift.
+Needs an Android SDK + Gradle (compileSdk 35, minSdk 31, Java 17). It's a single Gradle module
+rooted at `android/`:
+
+```sh
+cd android
+echo "sdk.dir=/path/to/android-sdk" > local.properties
+./gradlew assembleRelease          # uses the committed Gradle wrapper
+```
+
+A `copyWeb` task bundles the web files (`index.html`, `engine.js`, `refrigerant_pt.js`,
+`electrical_sequences.js`) into the APK's assets at build time, so the app never drifts from the
+node-tested engine. **Signing:** if `android/keystore.properties` is present the release is signed
+with your release key; otherwise it builds **unsigned** — the split that lets F-Droid do a
+[reproducible build](https://f-droid.org/docs/Reproducible_Builds) (rebuild from source and verify it
+byte-matches the developer-signed APK).
+
+## Releasing
+Cutting a version — and the release keystore you must back up — are documented in [RELEASE.md](RELEASE.md).
 
 ## Status & scope
 The engine is unit-tested against textbook values; the app has been used in the field during

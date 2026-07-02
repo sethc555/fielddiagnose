@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate refrigerant_pt.json / .js — the offline P-T table the fieldapp uses *instead of* CoolProp.
+"""Generate refrigerant_pt.json / .js — the offline P-T table Field Diagnose uses *instead of* CoolProp.
 
 A phone can't run CoolProp, so we precompute the saturation physics (CoolProp) into a static table the
 app interpolates: gauge psig -> [bubble °F, dew °F]. Superheat reads the

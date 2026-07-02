@@ -1,4 +1,4 @@
-// fieldapp engine tests — manual readings -> diagnosis, offline, no CoolProp. Run: node test_engine.js
+// Field Diagnose engine tests — manual readings -> diagnosis, offline, no CoolProp. Run: node test_engine.js
 const assert = require('assert');
 const { diagnose, wetBulbF, targetSuperheatFixed, psychro } = require('./engine.js');
 const pt = require('./refrigerant_pt.json');
@@ -67,4 +67,4 @@ r = diagnose({ refrigerant: 'R-410A', metering: 'txv', suction_psig: 110, suctio
                head_psig: 400, liquid_line_f: 110, oat_f: 90 }, pt);
 assert(r.score != null && r.score < 100, `faults lower the score (got ${r.score})`);
 
-console.log('OK — fieldapp engine tests pass');
+console.log('OK — Field Diagnose engine tests pass');

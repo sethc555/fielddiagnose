@@ -1,37 +1,46 @@
-# Getting Field Diagnose into F-Droid
+# Field Diagnose on F-Droid — status & how it's wired
 
-F-Droid does **not** take an uploaded APK. It builds the app from source on its own
-server and signs it with the F-Droid key. You submit a small *recipe* (the YAML in this
-folder) that points at a git tag; F-Droid builds that tag.
+**Status:** submitted to the official F-Droid catalog as
+[fdroiddata!41764](https://gitlab.com/fdroid/fdroiddata/-/merge_requests/41764), awaiting review.
 
-## What's already done in this repo
-- GPL-3.0 license, no proprietary/Google dependencies, builds from the CLI.
-- Gradle **wrapper** committed (`android/gradlew`) — F-Droid builds with it.
-- Release is **unsigned by default** (F-Droid signs it). `-PselfSign` debug-signs for sideloading.
-- `fastlane/metadata/android/en-US/` — title, descriptions, changelog, screenshot (F-Droid reads these).
-- A tagged release: `v0.1.9` (versionCode 10).
+F-Droid doesn't take an uploaded APK — it builds from source on its own infrastructure. This app is
+set up for **reproducible builds**: F-Droid rebuilds the tagged commit *unsigned* and verifies it
+byte-matches the developer-signed APK we publish, then distributes that developer-signed APK. The
+F-Droid build and the GitHub-release build therefore share one signature.
 
-## Submit to the official F-Droid catalog
-1. Make sure the tag is pushed: `git push --tags` (tag `v0.1.9` must be on GitHub).
-2. Create a GitLab account and **fork** https://gitlab.com/fdroid/fdroiddata
-3. Add this file as `metadata/org.fielddiagnose.yml` in your fork.
-4. (Optional, recommended) Test the build locally with the F-Droid tooling:
-   `pip install fdroidserver` then `fdroid build -v org.fielddiagnose:10`
-   (full validation uses their buildserver/Docker image).
-5. Open a **Merge Request** to fdroiddata. F-Droid CI builds the recipe and a reviewer checks it.
-   - If CI complains about the gradle project location, adjust `subdir:` (try `android` vs `android/app`).
-   - Reviewers may add anti-feature tags for the optional network (NOAA) / location — both are
-     disclosed in the description; NOAA is a free public service.
-6. Once merged, F-Droid builds, signs, and publishes. Because `UpdateCheckMode: Tags` +
-   `AutoUpdateMode: Version` are set, every future `vX.Y.Z` tag is picked up automatically.
+## The recipe (`org.fielddiagnose.yml`)
+Submitted to fdroiddata as `metadata/org.fielddiagnose.yml`. Key fields:
+- `RepoType: git` + `Repo:` — this repo.
+- `Builds:` — one entry per version, pinned to the **full commit hash** (not a tag) of `vX.Y.Z`,
+  with `subdir: android` and `gradle: [yes]`.
+- `Binaries:` — the GitHub-release APK URL (`…/download/v%v/FieldDiagnose-%v.apk`) F-Droid verifies against.
+- `AllowedAPKSigningKeys:` — the SHA-256 of the release signing key.
+- `UpdateCheckMode: Tags` + `AutoUpdateMode: Version` — every future `vX.Y.Z` tag is picked up
+  automatically; F-Droid opens the update MR itself.
 
-Timeline: first inclusion usually takes a few weeks (review queue).
+Listing text, changelog and screenshots come from `fastlane/metadata/android/en-US/` (F-Droid reads
+them from the repo), so they are not duplicated in the recipe.
 
-## Faster alternative: IzzyOnDroid
-IzzyOnDroid is an F-Droid-compatible repo that distributes the developer's **own** signed
-APK from GitHub Releases (much faster to get listed). For that route you need a **stable
-release keystore** (not the debug key) so updates verify — generate one and sign the
-GitHub-release APK with it. Users then add the IzzyOnDroid repo URL in their F-Droid client.
+## Verify the build locally (what F-Droid CI does)
+```sh
+pip install fdroidserver
+# from an fdroid workspace containing metadata/org.fielddiagnose.yml:
+fdroid lint  org.fielddiagnose
+fdroid build org.fielddiagnose:<versionCode>   # builds + verifies the reproducible binary
+```
+A green `fdroid build` ("compared built binary to supplied reference binary successfully") means the
+F-Droid CI build should pass.
+
+## The fork pipeline shows "failed" — that's expected
+The fork's own CI pipeline fails with **zero jobs** because the account has no shared-runner access —
+nothing actually ran, so it isn't a build failure. Per fdroiddata's template, F-Droid maintainers
+trigger CI on their side. Don't add a phone/credit card to "fix" it, and don't edit `.gitlab-ci.yml`.
+(You can disable CI/CD on the fork to stop the failure emails: fork → Settings → General → Visibility,
+project features, permissions → CI/CD → off.)
+
+## Ongoing releases
+See [../RELEASE.md](../RELEASE.md): bump the version, tag `vX.Y.Z`, build the signed APK, publish it as
+`FieldDiagnose-X.Y.Z.apk` on GitHub Releases — F-Droid autoupdate does the rest, no new MR per release.
 
 ## Note on the campus_twin build
 This is the standalone, campus-free app (`org.fielddiagnose`). The campus_twin variant
